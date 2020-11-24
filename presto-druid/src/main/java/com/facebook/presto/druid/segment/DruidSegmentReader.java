@@ -63,7 +63,7 @@ public class DruidSegmentReader
             columnValueSelectors = selectorsBuilder.build();
         }
         catch (IOException e) {
-            throw new PrestoException(DRUID_SEGMENT_LOAD_ERROR, "failed to load druid segment");
+            throw new PrestoException(DRUID_SEGMENT_LOAD_ERROR, "failed to load druid segment: " + e.getMessage());
         }
     }
 

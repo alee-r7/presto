@@ -45,6 +45,7 @@ public class DruidQueryGeneratorContext
     private final Set<VariableReferenceExpression> variablesInAggregation;
     private final Optional<String> from;
     private final Optional<String> filter;
+    private final Optional<String> segmentFilter;
     private final OptionalLong limit;
     private final int aggregations;
     private final Optional<PlanNodeId> tableScanNodeId;
@@ -59,6 +60,7 @@ public class DruidQueryGeneratorContext
                 .add("variablesInAggregation", variablesInAggregation)
                 .add("from", from)
                 .add("filter", filter)
+                .add("segmentFilter", segmentFilter)
                 .add("limit", limit)
                 .add("aggregations", aggregations)
                 .add("tableScanNodeId", tableScanNodeId)
@@ -79,6 +81,7 @@ public class DruidQueryGeneratorContext
                 selections,
                 Optional.ofNullable(from),
                 Optional.empty(),
+                Optional.empty(),
                 OptionalLong.empty(),
                 0,
                 new LinkedHashMap<>(),
@@ -91,6 +94,7 @@ public class DruidQueryGeneratorContext
             Map<VariableReferenceExpression, Selection> selections,
             Optional<String> from,
             Optional<String> filter,
+            Optional<String> segmentFilter,
             OptionalLong limit,
             int aggregations,
             Map<VariableReferenceExpression, Selection> groupByColumns,
@@ -101,12 +105,28 @@ public class DruidQueryGeneratorContext
         this.selections = new LinkedHashMap<>(requireNonNull(selections, "selections can't be null"));
         this.from = requireNonNull(from, "source can't be null");
         this.filter = requireNonNull(filter, "filter is null");
+        this.segmentFilter = requireNonNull(segmentFilter, "segmentFilter is null");
         this.limit = requireNonNull(limit, "limit is null");
         this.aggregations = aggregations;
         this.groupByColumns = new LinkedHashMap<>(requireNonNull(groupByColumns, "groupByColumns can't be null. It could be empty if not available"));
         this.hiddenColumnSet = requireNonNull(hiddenColumnSet, "hidden column set is null");
         this.variablesInAggregation = requireNonNull(variablesInAggregation, "variables in aggregation is null");
         this.tableScanNodeId = requireNonNull(tableScanNodeId, "tableScanNodeId can't be null");
+    }
+
+    public DruidQueryGeneratorContext withSegmentFilter(String segmentFilter)
+    {
+        return new DruidQueryGeneratorContext(
+                selections,
+                from,
+                filter,
+                Optional.of(segmentFilter),
+                limit,
+                aggregations,
+                groupByColumns,
+                variablesInAggregation,
+                hiddenColumnSet,
+                tableScanNodeId);
     }
 
     public DruidQueryGeneratorContext withFilter(String filter)
@@ -119,6 +139,7 @@ public class DruidQueryGeneratorContext
                 selections,
                 from,
                 Optional.of(filter),
+                segmentFilter,
                 limit,
                 aggregations,
                 groupByColumns,
@@ -133,6 +154,7 @@ public class DruidQueryGeneratorContext
                 newSelections,
                 from,
                 filter,
+                segmentFilter,
                 limit,
                 aggregations,
                 groupByColumns,
@@ -151,6 +173,7 @@ public class DruidQueryGeneratorContext
                 selections,
                 from,
                 filter,
+                segmentFilter,
                 OptionalLong.of(limit),
                 aggregations,
                 groupByColumns,
@@ -200,6 +223,7 @@ public class DruidQueryGeneratorContext
                 targetSelections,
                 from,
                 filter,
+                segmentFilter,
                 limit,
                 newAggregations,
                 newGroupByColumns,
@@ -219,6 +243,7 @@ public class DruidQueryGeneratorContext
                 selections,
                 from,
                 filter,
+                segmentFilter,
                 limit,
                 aggregations,
                 groupByColumns,
@@ -299,7 +324,7 @@ public class DruidQueryGeneratorContext
             query += " LIMIT " + limit.getAsLong();
             pushdown = true;
         }
-        return new DruidQueryGenerator.GeneratedDql(tableName, query, pushdown);
+        return new DruidQueryGenerator.GeneratedDql(tableName, query, pushdown, segmentFilter.isPresent() ? segmentFilter.get() : null);
     }
 
     public Map<VariableReferenceExpression, DruidColumnHandle> getAssignments()
@@ -326,6 +351,7 @@ public class DruidQueryGeneratorContext
                 newSelections,
                 from,
                 filter,
+                segmentFilter,
                 limit,
                 aggregations,
                 groupByColumns,

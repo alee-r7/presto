@@ -52,11 +52,18 @@ public class DruidSplitManager
     {
         DruidTableLayoutHandle layoutHandle = (DruidTableLayoutHandle) layout;
         DruidTableHandle table = layoutHandle.getTable();
-        if (isComputePushdownEnabled(session) || (table.getDql().isPresent() && table.getDql().get().getPushdown())) {
+        boolean dqlPresent = table.getDql().isPresent();
+        if (isComputePushdownEnabled(session) && (dqlPresent && table.getDql().get().getPushdown())) {
             return new FixedSplitSource(ImmutableList.of(createBrokerSplit(table.getDql().get())));
         }
-        List<String> segmentIds = druidClient.getDataSegmentId(table.getTableName());
 
+        final List<String> segmentIds;
+        if (dqlPresent && table.getDql().get().getSegmentFilter() != null) {
+            segmentIds = druidClient.getDataSegmentId(table.getTableName(), table.getDql().get().getSegmentFilter());
+        }
+        else {
+            segmentIds = druidClient.getDataSegmentId(table.getTableName());
+        }
         List<DruidSplit> splits = segmentIds.stream()
                 .map(id -> druidClient.getSingleSegmentInfo(table.getTableName(), id))
                 .map(info -> createSegmentSplit(info, HostAddress.fromUri(druidClient.getDruidBroker())))
