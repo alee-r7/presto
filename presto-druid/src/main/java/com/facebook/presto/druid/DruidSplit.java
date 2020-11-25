@@ -137,6 +137,7 @@ public class DruidSplit
                 .add("brokerDql", brokerDql)
                 .add("segmentInfo", segmentInfo)
                 .add("address", address)
+                .add("dimFilters", dimFilters)
                 .toString();
     }
 
