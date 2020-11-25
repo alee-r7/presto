@@ -69,8 +69,7 @@ public class DruidSplitManager
     {
         DruidTableLayoutHandle layoutHandle = (DruidTableLayoutHandle) layout;
         DruidTableHandle table = layoutHandle.getTable();
-        boolean dqlPresent = table.getDql().isPresent();
-        if (isComputePushdownEnabled(session) && (dqlPresent && table.getDql().get().getPushdown())) {
+        if (isComputePushdownEnabled(session) && (table.getDql().isPresent() && table.getDql().get().getPushdown())) {
             return new FixedSplitSource(ImmutableList.of(createBrokerSplit(table.getDql().get())));
         }
 
