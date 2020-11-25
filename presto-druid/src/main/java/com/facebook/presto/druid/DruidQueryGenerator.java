@@ -130,27 +130,16 @@ public class DruidQueryGenerator
         final String table;
         final String dql;
         final boolean pushdown;
-        final String segmentFilter;
-        // TODO:
-        //Map<String, String> dimensionalConstraints;
 
         @JsonCreator
         public GeneratedDql(
                 @JsonProperty("table") String table,
                 @JsonProperty("dql") String dql,
-                @JsonProperty("pushdown") boolean pushdown,
-                @JsonProperty("segmentFilter") String segmentFilter)
+                @JsonProperty("pushdown") boolean pushdown)
         {
             this.table = table;
             this.dql = dql;
             this.pushdown = pushdown;
-            this.segmentFilter = segmentFilter;
-        }
-
-        @JsonProperty("segmentFilter")
-        public String getSegmentFilter()
-        {
-            return segmentFilter;
         }
 
         @JsonProperty("dql")
@@ -178,7 +167,6 @@ public class DruidQueryGenerator
                     .add("dql", dql)
                     .add("table", table)
                     .add("pushdown", pushdown)
-                    .add("segmentFilter", segmentFilter)
                     .toString();
         }
     }
@@ -221,15 +209,8 @@ public class DruidQueryGenerator
             requireNonNull(context, "context is null");
             Map<VariableReferenceExpression, Selection> selections = context.getSelections();
             DruidFilterExpressionConverter druidFilterExpressionConverter = new DruidFilterExpressionConverter(typeManager, functionMetadataManager, standardFunctionResolution, session);
-            DruidSegmentFilterExpressionConverter druidSegmentFilterExpressionConverter = new DruidSegmentFilterExpressionConverter(typeManager, functionMetadataManager, standardFunctionResolution, session);
             String filter = node.getPredicate().accept(druidFilterExpressionConverter, selections::get).getDefinition();
-            String segmentFilter = node.getPredicate().accept(druidSegmentFilterExpressionConverter, selections::get).getDefinition();
-            if (!segmentFilter.trim().isEmpty()) {
-                return context.withSegmentFilter(segmentFilter).withFilter(filter).withOutputColumns(node.getOutputVariables());
-            }
-            else {
-                return context.withFilter(filter).withOutputColumns(node.getOutputVariables());
-            }
+            return context.withFilter(filter).withOutputColumns(node.getOutputVariables());
         }
 
         @Override
