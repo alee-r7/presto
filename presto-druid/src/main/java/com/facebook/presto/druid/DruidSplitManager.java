@@ -51,7 +51,8 @@ public class DruidSplitManager
         implements ConnectorSplitManager
 {
     private final DruidClient druidClient;
-    private DateTimeFormatter formatter = new DateTimeFormatterBuilder().appendInstant(3).parseCaseInsensitive().toFormatter();
+    // Druid stores segments times as strings in ISO-8601 format in UTC down to fractional seconds.
+    private DateTimeFormatter timeSegmentFormatter = new DateTimeFormatterBuilder().appendInstant(3).parseCaseInsensitive().toFormatter();
 
     @Inject
     public DruidSplitManager(DruidClient druidClient)
@@ -138,7 +139,7 @@ public class DruidSplitManager
                 // In clause style predicate, we can't use IN because druid stores it as text.
                 List<String> filters = new ArrayList<>();
                 for (Range range : ranges) {
-                    String iso8601 = formatter.format(Instant.ofEpochMilli((Long) range.getSingleValue()));
+                    String iso8601 = timeSegmentFormatter.format(Instant.ofEpochMilli((Long) range.getSingleValue()));
                     String filter = format("((\"%s\" %s '%s') AND (\"%s\" %s '%s'))",
                             "start", ">=", iso8601,
                             "end", "<=", iso8601);
@@ -154,23 +155,25 @@ public class DruidSplitManager
             else {
                 // Greater, less, between etc. NOTE: Equals not supported in presto on timestmp.
                 Range range = ranges.iterator().next();
-                Long high = null;
                 String highBoundFilter = null;
                 if (range.getHigh().getValueBlock().isPresent()) {
-                    high = (Long) range.getHigh().getValue();
-                    String operator = range.getHigh().getBound() == Bound.ABOVE ? ">=" : "<=";
-                    highBoundFilter = format("\"%s\" %s '%s'", "end", operator, formatter.format(Instant.ofEpochMilli(high)));
+                    highBoundFilter = format(
+                        "\"%s\" %s '%s'",
+                        "end",
+                        range.getHigh().getBound() == Bound.ABOVE ? ">=" : "<=",
+                        timeSegmentFormatter.format(Instant.ofEpochMilli((Long) range.getHigh().getValue())));
                 }
 
-                Long low = null;
                 String lowBoundFilter = null;
                 if (range.getLow().getValueBlock().isPresent()) {
-                    low = (Long) range.getLow().getValue();
-                    String operator = range.getLow().getBound() == Bound.ABOVE ? ">=" : "<=";
-                    lowBoundFilter = format("\"%s\" %s '%s'", "start", operator, formatter.format(Instant.ofEpochMilli(low)));
+                    lowBoundFilter = format(
+                        "\"%s\" %s '%s'",
+                        "start",
+                        range.getLow().getBound() == Bound.ABOVE ? ">=" : "<=",
+                        timeSegmentFormatter.format(Instant.ofEpochMilli((Long) range.getLow().getValue())));
                 }
                 if (highBoundFilter != null && lowBoundFilter != null) {
-                    return format("(%s) AND (%s)", lowBoundFilter, highBoundFilter);
+                    return format("((%s) AND (%s))", lowBoundFilter, highBoundFilter);
                 }
                 else if (highBoundFilter != null) {
                     return highBoundFilter;
@@ -178,7 +181,6 @@ public class DruidSplitManager
                 else if (lowBoundFilter != null) {
                     return lowBoundFilter;
                 }
-                return null;
             }
         }
         return null;

@@ -109,20 +109,6 @@ public class DruidQueryGeneratorContext
         this.tableScanNodeId = requireNonNull(tableScanNodeId, "tableScanNodeId can't be null");
     }
 
-    public DruidQueryGeneratorContext withSegmentFilter(String segmentFilter)
-    {
-        return new DruidQueryGeneratorContext(
-                selections,
-                from,
-                filter,
-                limit,
-                aggregations,
-                groupByColumns,
-                variablesInAggregation,
-                hiddenColumnSet,
-                tableScanNodeId);
-    }
-
     public DruidQueryGeneratorContext withFilter(String filter)
     {
         if (hasAggregation()) {
