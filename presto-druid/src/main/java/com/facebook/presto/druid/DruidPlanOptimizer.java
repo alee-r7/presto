@@ -81,11 +81,21 @@ public class DruidPlanOptimizer
             VariableAllocator variableAllocator,
             PlanNodeIdAllocator idAllocator)
     {
-        Map<TableScanNode, Void> scanNodes = maxSubplan.accept(new TableFindingVisitor(), null);
-        TableScanNode druidTableScanNode = getOnlyDruidTable(scanNodes).orElseThrow(() -> new PrestoException(
-                        GENERIC_INTERNAL_ERROR,
-                        "Expected to find druid table handle for the scan node"));
-        return maxSubplan.accept(new Visitor(druidTableScanNode, session, idAllocator), null);
+//        Map<TableScanNode, Void> scanNodes = maxSubplan.accept(new TableFindingVisitor(), null);
+//        TableScanNode druidTableScanNode = getOnlyDruidTable(scanNodes).orElseThrow(() -> new PrestoException(
+//                        GENERIC_INTERNAL_ERROR,
+//                        "Expected to find druid table handle for the scan node"));
+//        return maxSubplan.accept(new Visitor(druidTableScanNode, session, idAllocator), null);
+        if (!DruidSessionProperties.isComputePushdownEnabled(session)) {
+            return maxSubplan;
+        }
+        else {
+            Map<TableScanNode, Void> scanNodes = maxSubplan.accept(new TableFindingVisitor(), null);
+            TableScanNode druidTableScanNode = getOnlyDruidTable(scanNodes).orElseThrow(() -> new PrestoException(
+                    GENERIC_INTERNAL_ERROR,
+                    "Expected to find druid table handle for the scan node"));
+            return maxSubplan.accept(new Visitor(druidTableScanNode, session, idAllocator), null);
+        }
     }
 
     private static Optional<DruidTableHandle> getDruidTableHandle(TableScanNode tableScanNode)
